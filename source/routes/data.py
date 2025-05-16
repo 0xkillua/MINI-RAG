@@ -7,7 +7,7 @@ import aiofiles
 from models import ResponseSignal
 import logging
 from .schemes.data import ProcessRequest
-# from models.ProjectModel import ProjectModel
+from models.ProjectModel import ProjectModel
 # from models.ChunkModel import ChunkModel
 # from models.AssetModel import AssetModel
 # from models.db_schemes import DataChunk, Asset
@@ -19,7 +19,15 @@ data_router=APIRouter()
 @data_router.post("/upload/{project_id}")
 async def upload_data(request: Request, project_id: int, file: UploadFile,
         app_settings: Settings = Depends(get_settings)):
-               # validate the file properties
+    
+    project_model = await ProjectModel.create_instance(
+        db_client=request.app.db_client
+    )
+
+    project = await project_model.get_project_or_create_one(
+        project_id=project_id
+    )
+            # validate the file properties
     data_controller = DataController()
     is_valid, result_signal = data_controller.validate_uploaded_file(file=file)
 
@@ -47,6 +55,14 @@ async def upload_data(request: Request, project_id: int, file: UploadFile,
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
                 "signal": ResponseSignal.FILE_UPLOAD_FAILED.value
+            }
+        )
+    
+    return JSONResponse(
+        content={
+            "signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value,
+            "file_id": file_id,
+            
             }
         )
 @data_router.post("/process/{project_id}")
